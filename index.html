@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reaction Time Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background: #f5f5f5;
+        }
+
+        .box {
+            width: 100%;
+            height: 60vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .box.blue {
+            background-color: #4285f4;
+        }
+
+        .box.red {
+            background-color: #ea4335;
+        }
+
+        .box.green {
+            background-color: #34a853;
+        }
+
+        .title {
+            font-size: 5rem;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 1rem;
+        }
+
+        .subtitle {
+            font-size: 2rem;
+            color: rgba(255, 255, 255, 0.9);
+            text-align: center;
+            padding: 0 2rem;
+        }
+
+        .stats {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .summary {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .attempts {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .attempts-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .attempts-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .download-btn {
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .download-btn:hover {
+            background: #3367d6;
+        }
+
+        #attempts-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #attempts-table th {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 2px solid #e0e0e0;
+            color: #666;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        #attempts-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #f0f0f0;
+            color: #333;
+        }
+
+        #attempts-table tbody tr:hover {
+            background: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <div id="box" class="box blue">
+        <div class="title" id="title">Reaction Time Test</div>
+        <div class="subtitle" id="subtitle">When the red box turns green, click as quickly as you can. Click anywhere to start.</div>
+    </div>
+
+    <div class="stats">
+        <div class="summary">
+            <div class="stat-card">
+                <div class="stat-label">Trials</div>
+                <div class="stat-value" id="trials">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Median</div>
+                <div class="stat-value" id="median">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Mean</div>
+                <div class="stat-value" id="mean">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Misclicks</div>
+                <div class="stat-value" id="misclicks">0</div>
+            </div>
+        </div>
+
+        <div class="attempts" id="attempts-box" style="display: none;">
+            <div class="attempts-header">
+                <div class="attempts-title">Attempts</div>
+                <button class="download-btn" onclick="downloadCSV()">Download CSV</button>
+            </div>
+            <table id="attempts-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Time (ms)</th>
+                    </tr>
+                </thead>
+                <tbody id="attempts-list">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const box = document.getElementById('box');
+        const title = document.getElementById('title');
+        const subtitle = document.getElementById('subtitle');
+        const trialsEl = document.getElementById('trials');
+        const meanEl = document.getElementById('mean');
+        const medianEl = document.getElementById('median');
+        const misclicksEl = document.getElementById('misclicks');
+        const attemptsList = document.getElementById('attempts-list');
+        const attemptsBox = document.getElementById('attempts-box');
+
+        let state = 'ready'; // ready, waiting, click
+        let startTime = 0;
+        let greenTime = 0;
+        let timeout = null;
+        let attempts = []; // stores all attempts including misclicks
+        let attemptsData = []; // stores detailed data for each attempt
+        let misclicks = 0;
+
+        function setState(newState, data = {}) {
+            state = newState;
+
+            if (timeout) {
+                clearTimeout(timeout);
+                timeout = null;
+            }
+
+            switch (newState) {
+                case 'ready':
+                    box.className = 'box blue';
+                    title.textContent = 'Reaction Time Test';
+                    subtitle.textContent = 'When the red box turns green, click as quickly as you can. Click anywhere to start.';
+                    break;
+
+                case 'too-soon':
+                    box.className = 'box blue';
+                    title.textContent = 'Too soon!';
+                    subtitle.textContent = 'Click to try again';
+                    misclicks++;
+                    misclicksEl.textContent = misclicks;
+                    trialsEl.textContent = parseInt(trialsEl.textContent) + 1;
+                    attempts.push(null); // null represents a misclick
+                    attemptsData.push({
+                        trial_idx: attemptsData.length + 1,
+                        green_time: null,
+                        click_time: null,
+                        click_reaction_time: null
+                    });
+                    updateStats();
+                    break;
+
+                case 'waiting':
+                    box.className = 'box red';
+                    title.textContent = 'Wait for green';
+                    subtitle.textContent = '';
+
+                    const delay = Math.random() * 3000 + 3000; // 3-6 seconds
+                    timeout = setTimeout(() => {
+                        setState('click');
+                    }, delay);
+                    break;
+
+                case 'click':
+                    box.className = 'box green';
+                    title.textContent = 'Click!';
+                    subtitle.textContent = '';
+                    greenTime = Date.now();
+                    startTime = greenTime;
+                    break;
+
+                case 'result':
+                    box.className = 'box blue';
+                    title.textContent = `${data.time} ms`;
+                    subtitle.textContent = 'Click to keep going';
+
+                    attempts.push(data.time);
+                    attemptsData.push({
+                        trial_idx: attemptsData.length + 1,
+                        green_time: greenTime,
+                        click_time: data.clickTime,
+                        click_reaction_time: data.time
+                    });
+                    updateStats();
+                    break;
+            }
+        }
+
+        function updateStats() {
+            // Update trials count
+            trialsEl.textContent = attempts.length;
+
+            // Filter out null values (misclicks) for mean and median calculations
+            const validAttempts = attempts.filter(time => time !== null);
+
+            // Update mean
+            if (validAttempts.length > 0) {
+                const mean = Math.round(validAttempts.reduce((a, b) => a + b, 0) / validAttempts.length);
+                meanEl.textContent = `${mean} ms`;
+            } else {
+                meanEl.textContent = '-';
+            }
+
+            // Update median
+            if (validAttempts.length > 0) {
+                const sorted = [...validAttempts].sort((a, b) => a - b);
+                const mid = Math.floor(sorted.length / 2);
+                const median = sorted.length % 2 === 0
+                    ? Math.round((sorted[mid - 1] + sorted[mid]) / 2)
+                    : sorted[mid];
+                medianEl.textContent = `${median} ms`;
+            } else {
+                medianEl.textContent = '-';
+            }
+
+            // Update attempts table (show N/A for misclicks)
+            attemptsList.innerHTML = attempts
+                .map((time, i) => `<tr><td>${i + 1}</td><td>${time === null ? 'N/A' : time}</td></tr>`)
+                .join('');
+
+            // Show attempts box after first attempt
+            if (attempts.length > 0) {
+                attemptsBox.style.display = 'block';
+            }
+        }
+
+        box.addEventListener('click', () => {
+            switch (state) {
+                case 'ready':
+                case 'too-soon':
+                case 'result':
+                    setState('waiting');
+                    break;
+
+                case 'waiting':
+                    setState('too-soon');
+                    break;
+
+                case 'click':
+                    const clickTime = Date.now();
+                    const reactionTime = clickTime - startTime;
+                    setState('result', { time: reactionTime, clickTime: clickTime });
+                    break;
+            }
+        });
+
+        function downloadCSV() {
+            // Create CSV header
+            let csv = 'trial_idx,green_time,click_time,click_reaction_time\n';
+
+            // Add data rows
+            attemptsData.forEach(row => {
+                csv += `${row.trial_idx},`;
+                csv += `${row.green_time !== null ? row.green_time : ''},`;
+                csv += `${row.click_time !== null ? row.click_time : ''},`;
+                csv += `${row.click_reaction_time !== null ? row.click_reaction_time : ''}\n`;
+            });
+
+            // Create download link
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'reaction_time_results.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Initialize
+        setState('ready');
+    </script>
+</body>
+</html>
