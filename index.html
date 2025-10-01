@@ -149,6 +149,49 @@
         #attempts-table tbody tr:hover {
             background: #f9f9f9;
         }
+
+        @media (max-width: 768px) {
+            .title {
+                font-size: 3rem;
+                text-align: center;
+            }
+
+            .subtitle {
+                font-size: 1.5rem;
+                text-align: center;
+            }
+
+            .summary {
+                gap: 1rem;
+            }
+
+            .stat-card {
+                min-width: calc(50% - 0.5rem);
+                flex: 0 0 calc(50% - 0.5rem);
+            }
+
+            .stats {
+                padding: 1rem;
+            }
+
+            .attempts {
+                padding: 1rem;
+            }
+
+            #attempts-table th:last-child,
+            #attempts-table td:last-child {
+                text-align: right;
+            }
+
+            .download-btn {
+                font-size: 0.75rem;
+                padding: 0.5rem 0.75rem;
+            }
+
+            .attempts-title {
+                font-size: 1.125rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -164,16 +207,16 @@
                 <div class="stat-value" id="trials">0</div>
             </div>
             <div class="stat-card">
+                <div class="stat-label">Misclicks</div>
+                <div class="stat-value" id="misclicks">0</div>
+            </div>
+            <div class="stat-card">
                 <div class="stat-label">Median</div>
                 <div class="stat-value" id="median">-</div>
             </div>
             <div class="stat-card">
                 <div class="stat-label">Mean</div>
                 <div class="stat-value" id="mean">-</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Misclicks</div>
-                <div class="stat-value" id="misclicks">0</div>
             </div>
         </div>
 
