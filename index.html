@@ -320,6 +320,12 @@
             }
         }
 
+        box.addEventListener('mousedown', () => {
+            if (state === 'waiting') {
+                setState('too-soon');
+            }
+        });
+
         box.addEventListener('click', () => {
             switch (state) {
                 case 'ready':
