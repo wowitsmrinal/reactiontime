@@ -197,7 +197,7 @@
 <body>
     <div id="box" class="box blue">
         <div class="title" id="title">Reaction Time Test</div>
-        <div class="subtitle" id="subtitle">When the red box turns green, click as quickly as you can. Click anywhere to start.</div>
+        <div class="subtitle" id="subtitle">When the red box turns green, click as quickly as you can.<br>Click anywhere to start.</div>
     </div>
 
     <div class="stats">
@@ -269,7 +269,7 @@
                 case 'ready':
                     box.className = 'box blue';
                     title.textContent = 'Reaction Time Test';
-                    subtitle.textContent = 'When the red box turns green, click as quickly as you can. Click anywhere to start.';
+                    subtitle.innerHTML = 'When the red box turns green, click as quickly as you can.<br>Click anywhere to start.';
                     break;
 
                 case 'too-soon':
@@ -294,7 +294,7 @@
                     title.textContent = 'Wait for green';
                     subtitle.textContent = '';
 
-                    const delay = Math.random() * 3000 + 3000; // 3-6 seconds
+                    const delay = Math.random() * 3000 + 2000; // 3-5 seconds
                     timeout = setTimeout(() => {
                         setState('click');
                     }, delay);
